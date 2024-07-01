@@ -119,7 +119,7 @@ class TokenMetadata:
         }
 
 
-def __fetch_and_register_token_from_redirect(
+def _fetch_and_register_token_from_redirect(
         oauth, redirected_url, api_key, app_secret, token_path,
         token_write_func, asyncio, enforce_enums=True):
     token = oauth.fetch_token(
@@ -420,7 +420,7 @@ def client_from_login_flow(api_key, app_secret, callback_url, token_path,
                     'can set a longer timeout by passing a value of ' +
                     'callback_timeout to client_from_login_flow.')
 
-        return __fetch_and_register_token_from_redirect(
+        return _fetch_and_register_token_from_redirect(
             oauth, received_url, api_key, app_secret, token_path,
             token_write_func, asyncio, enforce_enums=enforce_enums)
 
@@ -531,7 +531,7 @@ def client_from_manual_flow(api_key, app_secret, callback_url, token_path,
 
     redirected_url = prompt('Redirect URL> ').strip()
 
-    return __fetch_and_register_token_from_redirect(
+    return _fetch_and_register_token_from_redirect(
         oauth, redirected_url, api_key, app_secret, token_path, token_write_func,
         asyncio, enforce_enums=enforce_enums)
 

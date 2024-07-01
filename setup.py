@@ -38,7 +38,9 @@ setuptools.setup(
         'psutil',
         'python-dateutil',
         'urllib3',
-        'websockets'
+        'websockets',
+        'playwright',
+        'pyotp'
     ],
     extras_require={
         'dev': [

@@ -1,50 +1,50 @@
-import time
+import asyncio
 import os
 from pyotp import TOTP
 from schwab.auth import _fetch_and_register_token_from_redirect
-from playwright.sync_api import sync_playwright
-from authlib.integrations.httpx_client import OAuth2Client
+from playwright.async_api import async_playwright
+from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 
-def get_redirect_url(authorize_url, username, password, totp_secret=None, headless_login=True):
+async def get_redirect_url(authorize_url, username, password, totp_secret=None, headless_login=True):
     if totp_secret:
         totp = TOTP(totp_secret)
-    with sync_playwright() as p:    
+    async with async_playwright() as p:    
         try:
-            browser = p.firefox.launch(headless=headless_login)
-            page = browser.new_page()
-            page.goto(authorize_url)
-            page.locator('#loginIdInput').fill(username)
-            page.locator('#passwordInput').fill(password)
-            page.locator('#btnLogin').click()
+            browser = await p.firefox.launch(headless=headless_login)
+            page = await browser.new_page()
+            await page.goto(authorize_url)
+            await page.locator('#loginIdInput').fill(username)
+            await page.locator('#passwordInput').fill(password)
+            await page.locator('#btnLogin').click()
             if totp_secret:
-                page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/placeholder')
-                page.locator('#placeholderCode').fill(totp.now())
-                page.locator('#continueButton').click()
-            page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/cag')
-            page.locator('#acceptTerms').click()
-            page.locator('#submit-btn').click()
-            page.locator('#agree-modal-btn-').click()
-            page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/account')
-            page.locator('#submit-btn').click()
-            page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/confirmation')
-            page.locator('#cancel-btn').click()
+                await page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/placeholder')
+                await page.locator('#placeholderCode').fill(totp.now())
+                await page.locator('#continueButton').click()
+            await page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/cag')
+            await page.locator('#acceptTerms').click()
+            await page.locator('#submit-btn').click()
+            await page.locator('#agree-modal-btn-').click()
+            await page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/account')
+            await page.locator('#submit-btn').click()
+            await page.wait_for_url('https://sws-gateway.schwab.com/ui/host/#/third-party-auth/confirmation')
+            await page.locator('#cancel-btn').click()
             url = ''
             while '127.0.0.1' not in url:
-                url = page.evaluate('() => window.location.href')
-                time.sleep(.1)
-            browser.close()
+                url = await page.evaluate('() => window.location.href')
+                await asyncio.sleep(.1)
+            await browser.close()
             return url
         except Exception as e: # close browser even if there's an exception
-            browser.close()
+            await browser.close()
             return
-
+        
 ################################################################################
 # client_from_user_creds
 
 
-def client_from_env_vars(token_path, api_key, app_secret, enforce_enums=True, 
-                         token_write_func=None, headless_login=True):
+async def client_from_env_vars(token_path, api_key, app_secret, enforce_enums=True,
+                               token_write_func=None, headless_login=True):
     '''
     Automatically logs in into Schwab account with headless Firefox using user 
     credentials supplied by preset environment variables: SCHWAB_USERNAME, 
@@ -72,14 +72,14 @@ def client_from_env_vars(token_path, api_key, app_secret, enforce_enums=True,
     password = os.getenv('SCHWAB_PASSWORD', '')
     totp_secret = os.getenv('SCHWAB_TOTP_TOKEN', '')
 
-    temp_client = OAuth2Client(
+    temp_client = AsyncOAuth2Client(
         client_id = api_key,
         client_secret = app_secret,
         redirect_uri = 'https://127.0.0.1')
-    authorize_url, state = temp_client.create_authorization_url(
+    authorize_url, state = await temp_client.create_authorization_url(
         'https://api.schwabapi.com/v1/oauth/authorize')
-    redirect_url = get_redirect_url(authorize_url, username, password, totp_secret, headless_login)
+    redirect_url = await get_redirect_url(authorize_url, username, password, totp_secret, headless_login)
 
     return _fetch_and_register_token_from_redirect(
-        temp_client, redirect_url, api_key, app_secret, token_path, token_write_func, False, 
+        temp_client, redirect_url, api_key, app_secret, token_path, token_write_func, True, 
         enforce_enums)
